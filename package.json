@@ -1,0 +1,14 @@
+{
+  "name": "games.mythril.co",
+  "version": "1.0.0",
+  "description": "Catalog of mythril.co games",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gus",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.4"
+  }
+}
