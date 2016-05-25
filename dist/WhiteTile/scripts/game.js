@@ -90,37 +90,73 @@ var MenuState = {
     this.mainGroup.add(this.logo, true);
 
     // Use custom button plugin to generate a button
-    this.button_Multiplayer = this.add.button(halfWidth, halfHeight + 50, 'PLAY!', 64, this.mainGroup);
+    this.button_Easy = this.add.button(halfWidth, halfHeight + 50, 'Easy Peasy', 64, this.mainGroup);
+    this.button_Med = this.add.button(halfWidth, halfHeight + 50 + (128), 'Normal', 64, this.mainGroup);
+    this.button_Hard = this.add.button(halfWidth, halfHeight + 50 + (128 * 2), 'HARDMODE GOOOOOO!', 64, this.mainGroup);
 
     // When the animation completes, start game
-    this.button_Multiplayer.customEvents.animComplete.add(function () {
-        this.state.start('whitetile');
+    this.button_Easy.customEvents.animComplete.add(function () {
+        this.state.start('whitetile', true, false, 'easy');
+    }, this);
+    this.button_Med.customEvents.animComplete.add(function () {
+        this.state.start('whitetile', true, false, 'med');
+    }, this);
+    this.button_Hard.customEvents.animComplete.add(function () {
+        this.state.start('whitetile', true, false, 'hard');
     }, this);
 
     // Slide the button in
-    this.game.add.tween(this.button_Multiplayer)
-      .from( { y: -200,  }, 800, Phaser.Easing.Elastic.Out, true);
+    this.game.add.tween(this.button_Easy)
+      .from( { y: -200,  }, 900, Phaser.Easing.Elastic.Out, true);
+    this.game.add.tween(this.button_Med)
+      .from( { y: -200,  }, 1050, Phaser.Easing.Elastic.Out, true);
+    this.game.add.tween(this.button_Hard)
+      .from( { y: -200,  }, 1250, Phaser.Easing.Elastic.Out, true);
     this.game.add.tween(this.logo)
-      .from( { y: -200,  }, 800, Phaser.Easing.Elastic.Out, true);
+      .from( { y: -200,  }, 900, Phaser.Easing.Elastic.Out, true);
   }
 };
 
 var GameState = {
+  DIFFICULTY: {
+    easy: {
+      rows: 25,
+      speed: 4,
+      pushTime: 100
+    },
+    med: {
+      rows: 100,
+      speed: 6,
+      pushTime: 80
+    },
+    hard: {
+      rows: 200,
+      speed: 10,
+      pushTime: 40
+    }
+  },
+
+  init: function (difficulty) {
+    this.difficultyKey = difficulty || 'med';
+    this.difficulty = this.DIFFICULTY[this.difficultyKey]
+  },
+
   create: function () {
     this.inPlay = true;
 
-    // TODO: set using difficulty
+    this.rows = this.difficulty.rows;
+    this.boardSpeed = this.difficulty.speed;
     this.cols = 4;
-    this.rows = 10;
     this.rowsInView = 4;
+
 
     // set tile dimensions
     this.tileWidth = this.world.width / 4;
     this.tileHeight = this.world.height / this.rowsInView;
 
     this.tileGroupHeight = this.rows * this.tileHeight;
-    // initial board speed + score
-    this.boardSpeed = 5;
+
+    // initialize score
     this.tilesClicked = 0;
 
     // init with all the rows;
@@ -242,7 +278,7 @@ var GameState = {
     this.endScreenScore.anchor.setTo(0.5, 0.5);
 
     this.button_Reset = this.add.button(halfWidth, halfHeight + 50 + (128 * 2), 'Retry?', 64, this.endScreen);
-    this.button_Reset.customEvents.animComplete.add(function () { this.state.restart(); }, this);
+    this.button_Reset.customEvents.animComplete.add(function () { this.state.restart(true, false, this.difficultyKey); }, this);
     this.game.add.tween(this.button_Reset).from({ y: -200,  }, 800, Phaser.Easing.Elastic.Out, true);
 
 
@@ -256,10 +292,10 @@ var GameState = {
     this.boardSpeed = 0;
     this.inPlay = false;
     this.deactivateTiles();
-    console.log('game over', reason);
 
     this.endScreenText.text = this.REASONS[reason];
     this.endScreenScore.text = 'Score: ' + this.tilesClicked;
+
     // slide in end screen
     var yTween = this.game.add
       .tween(this.endScreen)
@@ -317,7 +353,7 @@ var GameState = {
     this.nextTileCounter -= 1;
     this.tilesClicked += 1;
     this.tilesTween = this.add.tween(this.tiles)
-      .to({y: this.tiles.y + this.tileHeight * this.pushForce}, 100, 'Quart.easeInOut')
+      .to({y: this.tiles.y + this.tileHeight * this.pushForce}, this.difficulty.pushTime, 'Quart.easeInOut')
       .start();
   },
 
