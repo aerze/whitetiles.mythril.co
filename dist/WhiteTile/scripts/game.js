@@ -51,9 +51,9 @@ var PreloadState = {
     this.stage.backgroundColor = '#b1d256';
 
     // Create preload sprite
-    this.preloadBar = this.add.sprite(halfWidth / 2 - 100, this.game.height / 2, 'preloaderBar');
+    this.preloadBar = this.add.sprite(halfWidth - 100, this.game.height / 2, 'preloaderBar');
     // Add loading message
-    this.add.text(halfWidth / 2, this.game.height / 2 - 30, "Loading...", { font: "32px monospace", fill: "#fff" })
+    this.add.text(halfWidth, this.game.height / 2 - 30, "Loading...", { font: "32px monospace", fill: "#fff" })
       .anchor.setTo(0.5, 0.5);
 
     // crops preload sprite
