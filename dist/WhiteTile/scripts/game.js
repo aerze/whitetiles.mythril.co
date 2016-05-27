@@ -1,6 +1,6 @@
 window.onload = function () {
   var game = new Phaser.Game(
-    740, 1200, Phaser.CANVAS, 'gameContainer');
+    740, 1200, Phaser.AUTO, 'gameContainer');
   window.game = game; // TODO Remove in production
 
   game.state.add('boot', BootState);
@@ -118,66 +118,69 @@ var MenuState = {
 };
 
 var GameState = {
+  TEXTURES: {},
   DIFFICULTY: {
     easy: {
       rows: 25,
-      speed: 4,
+      speed: 7,
       pushTime: 100
     },
     med: {
       rows: 100,
-      speed: 6,
+      speed: 10,
       pushTime: 80
     },
     hard: {
       rows: 200,
-      speed: 10,
+      speed: 20,
       pushTime: 40
     }
+  },
+  REASONS: {
+    'whiteTile': 'Don\'t step on\nthe white tile!',
+    'wrongOrder': ' Missed A Step! ',
+    'missedTile': 'Too Late!',
+    'winner': 'Victory!'
   },
 
   init: function init (difficulty) {
     this.difficultyKey = difficulty || 'med';
-    this.difficulty = this.DIFFICULTY[this.difficultyKey]
+    this.difficulty = this.DIFFICULTY[this.difficultyKey];
+
+    this.gameIsOver = false;
   },
 
   create: function create () {
-    this.inPlay = true;
-
     this.rows = this.difficulty.rows;
     this.boardSpeed = this.difficulty.speed;
     this.cols = 4;
-    this.rowsInView = 4;
-
+    this.totalRowsInView = 4;
 
     // set tile dimensions
     this.tileWidth = this.world.width / 4;
-    this.tileHeight = this.world.height / this.rowsInView;
-
+    this.tileHeight = this.world.height / this.totalRowsInView;
     this.tileGroupHeight = this.rows * this.tileHeight;
 
     // initialize score
     this.tilesClicked = 0;
 
-    // init with all the rows;
-    this.nextTileCounter = this.rows +1
+    // decrementing counter of the next target row;
+    this.nextTileCounter = this.rows;
 
     // generate a new level
+    this.createTileTextures(this.tileWidth, this.tileHeight);
     this.generateTiles(this.cols, this.rows);
-
-    // activate input on tiles
-    // this.activateTiles();
 
     // prep end screen
     this.setupEnd();
   },
 
   generateTiles: function generateTiles (cols, rows) {
-    var rowsOffset = this.rowsInView - this.rows;
-    var textures = this.createTileTextures(this.tileWidth, this.tileHeight);
+    var rowsOffset = this.totalRowsInView - this.rows;
     var colCounter = cols;
     var rowCounter = rows;
-    var blackTile = false;
+    var isTarget = false;
+    var tileHeight = 0;
     var rand;
     var tile;
 
@@ -187,25 +190,35 @@ var GameState = {
     // start out further up by 1 tile
     this.tiles.y -= this.tileHeight;
 
-    for (rowCounter = rows; rowCounter > 0; rowCounter--) {
+    for (; rowCounter > 0; rowCounter--) {
       rand = this.rnd.between(1, 4);
+      tileHeight = this.tileHeight * (rowCounter -1 + rowsOffset);
 
       for (colCounter = cols; colCounter > 0; colCounter--) {
-        blackTile = rand === colCounter;
+        isTarget = rand === colCounter;
         tile = this.tiles.create(
-          this.tileWidth * (colCounter -1),
-          this.tileHeight* (rowCounter -1 + rowsOffset),
-          blackTile ? textures.black: textures.white
+          this.tileWidth * (colCounter -1), tileHeight,
+          isTarget ? this.TEXTURES.black: this.TEXTURES.white
         );
 
-        tile.color = blackTile ? 'black': 'white';
-        tile.id = blackTile ? rowCounter : undefined;
+        tile.color = isTarget ? 'black': 'white';
+        tile.id = isTarget ? rowCounter : -1;
         tile.row = rowCounter;
         tile.inputEnabled = false;
-        tile.events.onInputUp.add(function TileClickHandler(target) {
-          if (target.color === 'white') return this.gameOver('whiteTile');
-          if (target.id === this.nextTileCounter) return this.gameOver('wrongOrder');
-          return this.pushBoard(); // good click, push board
+        tile.exists = false;
+        tile.events.onInputDown.add(function TileClickHandler(tile) {
+          var reason = '';
+
+          if (tile.color === 'white') reason = 'whiteTile'
+          if (tile.id !== this.nextTileCounter) reason = 'wrongOrder';
+
+          if (reason) {
+            tile.loadTexture(this.TEXTURES.red);
+            return this.gameOver(reason);
+          } else tile.loadTexture(this.TEXTURES.blue);
+
+          this.nextTileCounter -= 1;
+          this.tilesClicked += 1;
         }, this);
       }
     }
@@ -213,24 +226,27 @@ var GameState = {
 
   createTileTextures: function createTileTextures(tileWidth, tileHeight) {
     var graphic = this.make.graphics(0, 0);
-    var whiteTexture;
-    var blackTexture;
 
     graphic.lineStyle(3, 0x000000, 1);
     graphic.beginFill(0xFFFFFF, 1);
     graphic.drawRect(0, 0, tileWidth, tileHeight);
     graphic.endFill();
-    whiteTexture = graphic.generateTexture();
+    this.TEXTURES.white = graphic.generateTexture();
 
     graphic.beginFill(0x000000, 1);
     graphic.drawRect(0, 0, tileWidth, tileHeight);
     graphic.endFill();
-    blackTexture = graphic.generateTexture();
+    this.TEXTURES.black = graphic.generateTexture();
 
-    return {
-      white: whiteTexture,
-      black: blackTexture
-    };
+    graphic.beginFill(0x03A9F4, 1);
+    graphic.drawRect(0, 0, tileWidth, tileHeight);
+    graphic.endFill();
+    this.TEXTURES.blue = graphic.generateTexture();
+
+    graphic.beginFill(0xE53935, 1);
+    graphic.drawRect(0, 0, tileWidth, tileHeight);
+    graphic.endFill();
+    this.TEXTURES.red = graphic.generateTexture();
   },
 
   deactivateTiles: function deactivateTiles () {
@@ -277,9 +293,10 @@ var GameState = {
   },
 
   gameOver: function gameOver (reason) {
-    // stop gameplay
+    if (this.gameIsOver) return;
+    this.gameIsOver = true;
+
     this.boardSpeed = 0;
-    this.inPlay = false;
     this.deactivateTiles();
 
     this.endScreenText.text = this.REASONS[reason];
@@ -298,67 +315,37 @@ var GameState = {
     this.endScreen.visible = true;
   },
 
-  REASONS: {
-    'whiteTile': 'Don\'t step on\nthe white tile!',
-    'wrongOrder': ' Missed A Step! ',
-    'missedTile': 'Too Late!',
-    'winner': 'You Won!'
-  },
-
   update: function update () {
-    if (!this.inPlay) return;
     if (this.nextRow !== this.tilesClicked+1) {
+      var botRow = this.nextTileCounter +5;
+      var topRow = this.nextTileCounter -5;
+      var tempTile;
+      this.tiles.forEach(function updateTileExistence(tile) {
+        tempTile = tile;
+        if (tile.row <= botRow && tile.row > topRow) {
+          tile.exists = true;
+          tile.inputEnabled = true;
+        } else {
+          tile.exists = false;
+          tile.inputEnabled = false;
+        }
+      }, this);
+
       // which row needs to be hit next
       this.nextRow = this.tilesClicked +1;
       // y value of 1 tile from the bottom
       this.dangerZoneTop = this.nextRow * this.tileHeight;
     }
 
-    // moving y values of the tile group's edges
-    this.nextRowBottom = this.tiles.y + this.tileHeight;
-    this.nextRowTop = this.tiles.y;
     this.tilesTop = this.tiles.y - this.tileGroupHeight;
 
-    // var botRow = this.nextTileCounter +1;
-    // var topRow = this.nextTileCounter -5;
-    var tempTile;
-    this.tiles.forEach(function checkVis(tile) {
-      // console.log(tile.row, this.nextTileCounter +1,  tile.row,  this.nextTileCounter + 2);
-      // var tileRow = tile.row;
-      // if (tileRow > botRow +1) return;
-      // if (tileRow < topRow -1) return;
-      tempTile = tile;
-      if (tile.row <= this.nextTileCounter +1 && tile.row > this.nextTileCounter - 6) {
-        tempTile.renderable = true;
-        tempTile.inputEnabled = true;
-      } else {
-        tempTile.renderable = false;
-        tempTile.inputEnabled = false
-      }
-    }, this);
-
-    // if last tile is past the bottom, let the player catch up
-    this.pushForce = (this.nextRowBottom >= this.dangerZoneTop)? 0.5: 1;
-
     // top of last tile is past the bottom, you lose
-    if (this.nextRowTop > this.dangerZoneTop) return this.gameOver('missedTile');
+    if (this.tiles.y > this.dangerZoneTop) return this.gameOver('missedTile');
 
     // if top has reach bottom, and you clicked once each row
     if (this.tilesTop === 0 && this.tilesClicked === this.rows) return this.gameOver('winner');
 
-    return this.moveBoard();
-  },
-
-  pushBoard: function pushBoard () {
-    this.nextTileCounter -= 1;
-    this.tilesClicked += 1;
-    this.tiles.y += this.tileHeight * this.pushForce /2;
-    // this.tilesTween = this.add.tween(this.tiles)
-    //   .to({y: this.tiles.y + this.tileHeight * this.pushForce}, this.difficulty.pushTime, 'Quart.easeInOut')
-    //   .start();
-  },
-
-  moveBoard: function moveBoard () {
+    // move board
     this.tiles.y += this.boardSpeed;
   }
 };
