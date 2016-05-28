@@ -121,19 +121,19 @@ var GameState = {
   TEXTURES: {},
   DIFFICULTY: {
     easy: {
-      rows: 25,
-      speed: 7,
-      pushTime: 100
+      rows: 50,
+      speed: 10,
+      acceleration: 1.1
     },
     med: {
       rows: 100,
-      speed: 10,
-      pushTime: 80
+      speed: 15,
+      acceleration: 1.08
     },
     hard: {
-      rows: 200,
-      speed: 20,
-      pushTime: 40
+      rows: 150,
+      speed: 15,
+      acceleration: 1.1
     }
   },
   REASONS: {
@@ -155,6 +155,7 @@ var GameState = {
     this.boardSpeed = this.difficulty.speed;
     this.cols = 4;
     this.totalRowsInView = 4;
+    this.nextRow = 0;
 
     // set tile dimensions
     this.tileWidth = this.world.width / 4;
@@ -188,7 +189,7 @@ var GameState = {
     this.tiles = this.add.group();
     this.tiles.name = 'Tiles';
     // start out further up by 1 tile
-    this.tiles.y -= this.tileHeight;
+    this.tiles.y -= this.tileHeight *3;
 
     for (; rowCounter > 0; rowCounter--) {
       rand = this.rnd.between(1, 4);
@@ -335,16 +336,17 @@ var GameState = {
       this.nextRow = this.tilesClicked +1;
       // y value of 1 tile from the bottom
       this.dangerZoneTop = this.nextRow * this.tileHeight;
+      // this.tensRow = (Phaser.Math.floorTo(this.nextRow, 1) / 100) +1;
+      if (this.nextRow % 10 === 0) {
+        this.boardSpeed =  Phaser.Math.floorTo(this.boardSpeed * this.difficulty.acceleration, -2);
+      }
     }
 
-    this.tilesTop = this.tiles.y - this.tileGroupHeight;
+    // if top has reach bottom, and you clicked once each row
+    if (this.tilesClicked === this.rows) return this.gameOver('winner');
 
     // top of last tile is past the bottom, you lose
     if (this.tiles.y > this.dangerZoneTop) return this.gameOver('missedTile');
-
-    // if top has reach bottom, and you clicked once each row
-    if (this.tilesTop === 0 && this.tilesClicked === this.rows) return this.gameOver('winner');
-
     // move board
     this.tiles.y += this.boardSpeed;
   }
