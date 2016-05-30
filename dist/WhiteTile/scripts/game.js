@@ -60,7 +60,7 @@ var PreloadState = {
     this.load.setPreloadSprite(this.preloadBar);
 
     // Bitmap Fonts
-    this.load.bitmapFont('coolvetica', 'assets/fonts/coolvetica_regular_32_0.png', 'assets/fonts/coolvetica_regular_32.xml');
+    this.load.bitmapFont('coolvetica', 'assets/fonts/coolvetica.png', 'assets/fonts/coolvetica.xml');
 
     // Load the rest of the assets
     this.load.image('logo', 'assets/logo.png');
@@ -92,7 +92,7 @@ var MenuState = {
     // Use custom button plugin to generate a button
     this.button_Easy = this.add.button(halfWidth, halfHeight + 50, 'Easy Peasy', 64, this.mainGroup);
     this.button_Med = this.add.button(halfWidth, halfHeight + 50 + (128), 'Normal', 64, this.mainGroup);
-    this.button_Hard = this.add.button(halfWidth, halfHeight + 50 + (128 * 2), 'HARDMODE GOOOOOO!', 64, this.mainGroup);
+    this.button_Hard = this.add.button(halfWidth, halfHeight + 50 + (128 * 2), 'HARDMODE GOOO!', 64, this.mainGroup);
 
     // When the animation completes, start game
     this.button_Easy.customEvents.animComplete.add(function () {
@@ -174,6 +174,14 @@ var GameState = {
 
     // prep end screen
     this.setupEnd();
+    this.setupText();
+  },
+
+  setupText: function () {
+      this.scoreText = this.add.bitmapText(20, 10, 'coolvetica','',128);
+      this.scoreText.tint = 0x03A9F4;
+      this.scoreText.anchor.setTo(0, 0);
+
   },
 
   generateTiles: function generateTiles (cols, rows) {
@@ -298,6 +306,7 @@ var GameState = {
     this.gameIsOver = true;
 
     this.boardSpeed = 0;
+    this.scoreText.visible = false;
     this.deactivateTiles();
 
     this.endScreenText.text = this.REASONS[reason];
@@ -317,6 +326,9 @@ var GameState = {
   },
 
   update: function update () {
+
+    this.scoreText.setText(this.tilesClicked);
+
     if (this.nextRow !== this.tilesClicked+1) {
       var botRow = this.nextTileCounter +5;
       var topRow = this.nextTileCounter -5;
